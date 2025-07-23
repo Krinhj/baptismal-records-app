@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import LoginPage from "./pages/LoginPage";
 import Dashboard   from "./pages/Dashboard";
 import AddRecord   from "./pages/AddRecord";
@@ -7,21 +7,32 @@ import ManageUsers from "./pages/ManageUsers";
 import Settings    from "./pages/Settings";
 
 export default function App() {
-  const path = window.location.pathname;
+  // Use state to track current path for SPA navigation
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const session = localStorage.getItem("session");
 
+  // Listen for navigation events (back/forward buttons and programmatic navigation)
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // Redirect rules
-  if (path === "/dashboard" && !session) {
-    window.location.href = "/";
-    return null;
+  if (currentPath === "/dashboard" && !session) {
+    window.history.replaceState({}, "", "/");
+    setCurrentPath("/");
   }
-  if (path === "/" && session) {
-    window.location.href = "/dashboard";
-    return null;
+  if (currentPath === "/" && session) {
+    window.history.replaceState({}, "", "/dashboard");
+    setCurrentPath("/dashboard");
   }
 
   // Route rendering
-  switch (path) {
+  switch (currentPath) {
     case "/dashboard":
       return <Dashboard />;
     case "/add-record":

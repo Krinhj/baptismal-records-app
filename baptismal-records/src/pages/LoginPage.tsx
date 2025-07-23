@@ -1,75 +1,194 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { BookOpen, User, Lock, LogIn } from "lucide-react";
+
+interface LoginForm {
+  username: string;  // Changed from email
+  password: string;
+}
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState<LoginForm>({
+    username: "",  // Changed from email  
+    password: "",
+  });
+  const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (error) setError(""); // Clear error when user starts typing
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
-      setError("Please fill in both fields.");
+    
+    if (!formData.username.trim() || !formData.password.trim()) {
+      setError("Please fill in all fields");
       return;
     }
 
+    setIsLoading(true);
+    setError("");
+
     try {
-      const isValid = await invoke<boolean>("login_user", {
-        email,
-        password,
+      const response = await invoke("login_user", {
+        username: formData.username.trim(),  // Changed from email
+        password: formData.password,
       });
 
-      if (isValid) {
-        localStorage.setItem("session", JSON.stringify({ email }));
-        window.location.href = "/dashboard"; // or navigate via router
-      } else {
-        setError("Invalid credentials.");
-      }
+      // Parse the user data from the response
+      const userData = JSON.parse(response as string);
+      
+      // Store session data
+      localStorage.setItem("session", "active");
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      // Set flag to indicate this is a fresh login (for toast notification)
+      sessionStorage.setItem("justLoggedIn", "true");
+      
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
+      
     } catch (err) {
-      console.error(err);
-      setError("Something went wrong.");
+      setError(err as string || "Login failed. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form onSubmit={handleLogin} className="bg-white shadow-md rounded px-8 pt-6 pb-8 w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-center mb-4">Parish Login</h2>
-
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
-          <input
-            type="email"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="e.g. admin@parish.com"
-          />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-4">
+            <BookOpen className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Baptismal Records Manager
+          </h1>
+          <p className="text-gray-600">
+            Sign in to manage church records
+          </p>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2">Password</label>
-          <input
-            type="password"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
-          />
-        </div>
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Username Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Username
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              placeholder="Enter your username"
+              disabled={isLoading}
+            />
+          </div>
 
-        <div className="flex items-center justify-between">
+          {/* Password Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              placeholder="Enter your password"
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Submit Button */}
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '500',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? '0.5' : '1',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              outline: 'none', // Remove browser focus outline
+              boxShadow: 'none' // Remove any box shadow
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                // Target the button element specifically
+                const button = e.currentTarget;
+                button.style.backgroundColor = '#1d4ed8';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                // Target the button element specifically
+                const button = e.currentTarget;
+                button.style.backgroundColor = '#2563eb';
+              }
+            }}
+            onFocus={(e) => {
+              if (!isLoading) {
+                // Custom focus style instead of browser default
+                const button = e.currentTarget;
+                button.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.5)';
+              }
+            }}
+            onBlur={(e) => {
+              // Remove focus style
+              const button = e.currentTarget;
+              button.style.boxShadow = 'none';
+            }}
           >
-            Login
+            {isLoading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-5 h-5" />
+                <span>Sign In</span>
+              </>
+            )}
           </button>
+        </form>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-500">
+            Church Management System
+          </p>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

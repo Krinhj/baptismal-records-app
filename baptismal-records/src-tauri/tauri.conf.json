@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "baptismal-records",
-        "width": 800,
-        "height": 600
+        "title": "Baptismal Records Manager",
+        "width": 1100,
+        "height": 800
       }
     ],
     "security": {
