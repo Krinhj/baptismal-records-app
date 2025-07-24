@@ -56,17 +56,20 @@ async function deleteBaptismRecord() {
       where: { id: parsedRecordId },
     });
 
-    // TODO: In the future, we can add audit logging here
-    // await prisma.auditLog.create({
-    //   data: {
-    //     userId: parsedDeletedBy,
-    //     action: "DELETE",
-    //     tableName: "BaptismRecord",
-    //     recordId: parsedRecordId,
-    //     oldData: JSON.stringify(recordForAudit),
-    //     newData: null,
-    //   }
-    // });
+    // Create audit log entry
+    await prisma.auditLog.create({
+      data: {
+        userId: parsedDeletedBy,
+        action: "DELETE",
+        tableName: "BaptismRecord",
+        recordId: parsedRecordId,
+        oldValues: JSON.stringify(recordForAudit), // Fixed: was oldData, now oldValues
+        newValues: null, // Fixed: was newData, now newValues
+        ipAddress: null, // Could be passed from frontend if needed
+        userAgent: null, // Could be passed from frontend if needed
+        notes: `Deleted baptism record for ${existingRecord.childName}`,
+      },
+    });
 
     // Return success response
     const response = {

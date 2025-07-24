@@ -3,10 +3,12 @@ import {
   BookOpen,
   PlusCircle,
   Database,
+  Users,
   RotateCcw,
   LogOut,
   CheckCircle,
   X,
+  AlertCircle, // ADD THIS IMPORT FOR AUDIT LOGS ICON
 } from "lucide-react";
 import AddRecordModal from "../components/AddRecordModal"; // Import the modal component
 
@@ -26,7 +28,8 @@ const CARDS = [
     path: "/view-records",
     bgColor: "bg-blue-50",
     iconBg: "bg-blue-100",
-    action: "navigate" // Navigate to a page
+    action: "navigate",
+    roles: ["SUPER_ADMIN", "ADMIN", "USER"] // Available to all roles
   },
   { 
     title: "Add New Record", 
@@ -35,7 +38,28 @@ const CARDS = [
     path: "/add-record",
     bgColor: "bg-green-50",
     iconBg: "bg-green-100",
-    action: "modal" // Open modal instead of navigating
+    action: "modal",
+    roles: ["SUPER_ADMIN", "ADMIN", "USER"] // Available to all roles
+  },
+  { 
+    title: "Manage Parish Staff", 
+    subtitle: "Add and manage priests, deacons, and staff",
+    icon: <Users size={32} className="text-orange-500" />, 
+    path: "/manage-parish-staff",
+    bgColor: "bg-orange-50",
+    iconBg: "bg-orange-100",
+    action: "navigate",
+    roles: ["SUPER_ADMIN"] // Only SUPER_ADMIN can see this
+  },
+  { 
+    title: "System Audit Logs", // ADD THIS NEW CARD
+    subtitle: "Debug feature - Monitor all system activities",
+    icon: <AlertCircle size={32} className="text-red-500" />, 
+    path: "/audit-logs",
+    bgColor: "bg-red-50",
+    iconBg: "bg-red-100",
+    action: "navigate",
+    roles: ["SUPER_ADMIN"] // Only SUPER_ADMIN can see this debug feature
   },
   { 
     title: "Backup Database", 
@@ -44,7 +68,8 @@ const CARDS = [
     path: "/backup",
     bgColor: "bg-purple-50",
     iconBg: "bg-purple-100",
-    action: "navigate" // Navigate to a page
+    action: "navigate",
+    roles: ["SUPER_ADMIN", "ADMIN"] // SUPER_ADMIN and ADMIN only
   }
 ];
 
@@ -234,9 +259,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Cards Grid */}
+        {/* Cards Grid - WITH ROLE-BASED FILTERING */}
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {CARDS.map((card) => (
+          {CARDS.filter(card => card.roles.includes(user.role)).map((card) => (
             <div
               key={card.path}
               onClick={() => handleCardClick(card)}

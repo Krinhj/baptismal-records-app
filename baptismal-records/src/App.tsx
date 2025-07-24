@@ -3,7 +3,8 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard   from "./pages/Dashboard";
 import AddRecord   from "./pages/AddRecord";
 import ViewRecords from "./pages/ViewRecords";
-import ManageUsers from "./pages/ManageUsers";
+import ManageParishStaff from "./pages/ManageParishStaff";
+import AuditLogs from "./pages/AuditLogs";
 import Settings    from "./pages/Settings";
 
 export default function App() {
@@ -39,8 +40,10 @@ export default function App() {
       return <AddRecord />;
     case "/view-records":
       return <ViewRecords />;
-    case "/manage-users":
-      return <ManageUsers />;
+    case "/manage-parish-staff":
+      return <ManageParishStaff />;
+    case "/audit-logs":
+      return <AuditLogs />;
     case "/settings":
       return <Settings />;
     default:

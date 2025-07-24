@@ -14,9 +14,20 @@ interface BaptismRecord {
   updatedAt: string;
 }
 
+interface ParishStaff {
+  id: number;
+  name: string;
+  title: string | null;
+  role: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
-  record: BaptismRecord | null;
+  record: BaptismRecord | ParishStaff | null;
+  recordType: "baptism" | "staff";
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -24,6 +35,7 @@ interface DeleteConfirmationModalProps {
 const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   isOpen,
   record,
+  recordType,
   onConfirm,
   onCancel,
 }) => {
@@ -41,6 +53,77 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   const formatParents = (fatherName: string | null, motherName: string | null) => {
     const parents = [fatherName, motherName].filter(Boolean);
     return parents.length > 0 ? parents.join(" and ") : "Not provided";
+  };
+
+  const renderBaptismRecord = (baptismRecord: BaptismRecord) => (
+    <>
+      <p className="text-gray-600 mb-4">
+        Are you sure you want to delete this baptismal record? This action cannot be undone.
+      </p>
+      
+      <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Child:</span>
+          <span className="text-gray-900">{baptismRecord.childName}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Baptism Date:</span>
+          <span className="text-gray-900">{formatDate(baptismRecord.baptismDate)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Priest:</span>
+          <span className="text-gray-900">{baptismRecord.priestName}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Parents:</span>
+          <span className="text-gray-900">{formatParents(baptismRecord.fatherName, baptismRecord.motherName)}</span>
+        </div>
+      </div>
+    </>
+  );
+
+  const renderParishStaff = (staffMember: ParishStaff) => (
+    <>
+      <p className="text-gray-600 mb-4">
+        Are you sure you want to delete this parish staff member?
+      </p>
+      <p className="text-sm text-amber-600 mb-4">
+        <strong>Note:</strong> If this person is referenced in baptism records, they will be deactivated instead of deleted to maintain data integrity.
+      </p>
+      
+      <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Name:</span>
+          <span className="text-gray-900">{staffMember.name}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Title:</span>
+          <span className="text-gray-900">{staffMember.title || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Role:</span>
+          <span className="text-gray-900">{staffMember.role || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-medium text-gray-700">Status:</span>
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+            staffMember.active 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {staffMember.active ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+      </div>
+    </>
+  );
+
+  const getTitle = () => {
+    return recordType === "baptism" ? "Delete Baptismal Record" : "Delete Parish Staff Member";
+  };
+
+  const getButtonText = () => {
+    return recordType === "baptism" ? "Delete Record" : "Delete Staff Member";
   };
 
   return (
@@ -65,36 +148,17 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
                 <Trash2 className="w-6 h-6 text-red-600" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900">
-                Delete Baptismal Record
+                {getTitle()}
               </h2>
             </div>
           </div>
 
           {/* Content */}
           <div className="p-6">
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to delete this baptismal record? This action cannot be undone.
-            </p>
-            
-            {/* Record Details */}
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Child:</span>
-                <span className="text-gray-900">{record.childName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Baptism Date:</span>
-                <span className="text-gray-900">{formatDate(record.baptismDate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Priest:</span>
-                <span className="text-gray-900">{record.priestName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Parents:</span>
-                <span className="text-gray-900">{formatParents(record.fatherName, record.motherName)}</span>
-              </div>
-            </div>
+            {recordType === "baptism" 
+              ? renderBaptismRecord(record as BaptismRecord)
+              : renderParishStaff(record as ParishStaff)
+            }
           </div>
 
           {/* Actions */}
@@ -145,7 +209,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
               }}
             >
               <Trash2 className="w-4 h-4" />
-              <span>Delete Record</span>
+              <span>{getButtonText()}</span>
             </button>
           </div>
         </div>

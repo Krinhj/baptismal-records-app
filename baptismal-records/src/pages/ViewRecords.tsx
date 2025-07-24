@@ -529,6 +529,7 @@ export default function ViewRecords() {
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         record={deleteModal.record}
+        recordType="baptism"
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
       />

@@ -63,6 +63,31 @@ async function createBaptismRecord() {
       },
     });
 
+    // Create audit log entry
+    await prisma.auditLog.create({
+      data: {
+        userId: parsedCreatedBy,
+        action: "CREATE",
+        tableName: "BaptismRecord",
+        recordId: newRecord.id,
+        oldValues: null, // No old values for creation
+        newValues: JSON.stringify({
+          id: newRecord.id,
+          childName: newRecord.childName,
+          fatherName: newRecord.fatherName,
+          motherName: newRecord.motherName,
+          birthDate: newRecord.birthDate.toISOString(),
+          birthPlace: newRecord.birthPlace,
+          baptismDate: newRecord.baptismDate.toISOString(),
+          priestName: newRecord.priestName,
+          createdBy: newRecord.createdBy,
+        }),
+        ipAddress: null, // Could be passed from frontend if needed
+        userAgent: null, // Could be passed from frontend if needed
+        notes: `Created baptism record for ${newRecord.childName}`,
+      },
+    });
+
     // Return success response with the created record
     const response = {
       success: true,

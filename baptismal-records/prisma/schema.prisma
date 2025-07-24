@@ -12,29 +12,74 @@ datasource db {
 }
 
 model BaptismRecord {
-  id           Int      @id @default(autoincrement())
+  id           Int         @id @default(autoincrement())
   childName    String
   fatherName   String?
   motherName   String?
   birthDate    DateTime
   birthPlace   String
   baptismDate  DateTime
-  priestName   String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  priestName   String      // Will eventually reference ParishStaff
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   createdBy    Int
+  
+  // Relations
+  creator      User        @relation("CreatedBaptismRecords", fields: [createdBy], references: [id])
+  auditLogs    AuditLog[]  @relation("BaptismRecordAudits")
+}
+
+model ParishStaff {
+  id        Int      @id @default(autoincrement())
+  name      String
+  title     String?  // "Fr.", "Rev.", "Deacon", "Br."
+  role      String?  // "Pastor", "Associate Pastor", "Deacon", "Parish Administrator"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  auditLogs AuditLog[] @relation("ParishStaffAudits")
 }
 
 model User {
   id       Int      @id @default(autoincrement())
   name     String
-  username String   @unique  // Changed from email to username
+  username String   @unique
   password String
   role     Role     @default(USER)
+  
+  // Relations
+  createdRecords    BaptismRecord[] @relation("CreatedBaptismRecords")
+  auditLogs         AuditLog[]      @relation("UserAudits")
+  performedActions  AuditLog[]      @relation("AuditPerformer")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int      // Who performed the action
+  action      String   // "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT"
+  tableName   String   // "BaptismRecord", "ParishStaff", "User"
+  recordId    Int?     // ID of the affected record (null for LOGIN/LOGOUT)
+  oldValues   String?  // JSON string of old values (for UPDATE/DELETE)
+  newValues   String?  // JSON string of new values (for CREATE/UPDATE)
+  ipAddress   String?  // User's IP address
+  userAgent   String?  // Browser/device info
+  notes       String?  // Additional context or reason for action
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  performer           User           @relation("AuditPerformer", fields: [userId], references: [id])
+  baptismRecord       BaptismRecord? @relation("BaptismRecordAudits", fields: [baptismRecordId], references: [id])
+  baptismRecordId     Int?
+  parishStaff         ParishStaff?   @relation("ParishStaffAudits", fields: [parishStaffId], references: [id])
+  parishStaffId       Int?
+  user                User?          @relation("UserAudits", fields: [auditedUserId], references: [id])
+  auditedUserId       Int?
 }
  
 enum Role {
-  SUPER_ADMIN  // Only you - debug features, audit logs
+  SUPER_ADMIN  // Only you - debug features, audit logs, parish staff management
   ADMIN        // Uncle (Priest) - full record management  
   USER         // Staff - create/view/edit only
 }

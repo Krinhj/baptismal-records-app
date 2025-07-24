@@ -111,12 +111,28 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       return;
     }
 
+    // Get current user from localStorage (same way as Dashboard)
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      setErrors({ submit: 'User session expired. Please log in again'});
+      return;
+    }
+
+    let currentUser;
+    try {
+      currentUser = JSON.parse(userData);
+    } catch (error) {
+      console.error("Error parsing user data: ", error);
+      setErrors({ submit: 'Invalid user session. Please log in again.'});
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await invoke('update_baptism_record', {
-        recordId: record.id,
-        updatedData: {
+        record_id: record.id,
+        updated_data: {
           child_name: formData.childName.trim(),
           father_name: formData.fatherName.trim() || null,
           mother_name: formData.motherName.trim() || null,
@@ -124,7 +140,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
           birth_place: formData.birthPlace.trim(),
           baptism_date: formData.baptismDate,
           priest_name: formData.priestName.trim(),
-        }
+        },
+        updated_by: currentUser.id
       });
 
       const result = JSON.parse(response as string);

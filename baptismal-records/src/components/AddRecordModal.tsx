@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { X, Plus, Calendar } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, Plus, Calendar, ChevronDown, Search, UserPlus } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface AddRecordModalProps {
@@ -16,6 +16,14 @@ interface FormData {
   birthPlace: string;
   baptismDate: string;
   priestName: string;
+}
+
+interface ParishStaff {
+  id: number;
+  name: string;
+  title: string | null;
+  role: string | null;
+  active: boolean;
 }
 
 const AddRecordModal: React.FC<AddRecordModalProps> = ({
@@ -35,6 +43,72 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
 
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Parish Staff dropdown states
+  const [parishStaff, setParishStaff] = useState<ParishStaff[]>([]);
+  const [filteredStaff, setFilteredStaff] = useState<ParishStaff[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAddNew, setShowAddNew] = useState(false);
+  const [newPriestName, setNewPriestName] = useState("");
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load parish staff when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchParishStaff();
+    }
+  }, [isOpen]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+        setShowAddNew(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter staff based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredStaff(parishStaff);
+    } else {
+      const filtered = parishStaff.filter(staff => 
+        staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (staff.title && staff.title.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredStaff(filtered);
+    }
+  }, [searchTerm, parishStaff]);
+
+  const fetchParishStaff = async () => {
+    try {
+      setStaffLoading(true);
+      const response = await invoke('get_parish_staff');
+      const result = JSON.parse(response as string);
+      
+      if (result.success) {
+        // Only show active staff members
+        const activeStaff = result.staff.filter((staff: ParishStaff) => staff.active);
+        setParishStaff(activeStaff);
+        setFilteredStaff(activeStaff);
+      } else {
+        console.error("Failed to fetch parish staff:", result.error);
+      }
+    } catch (error) {
+      console.error("Error fetching parish staff:", error);
+    } finally {
+      setStaffLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -50,6 +124,58 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
         [name]: "",
       }));
     }
+  };
+
+  const handlePriestSelect = (staffMember: ParishStaff) => {
+    const displayName = staffMember.title 
+      ? `${staffMember.title} ${staffMember.name}`
+      : staffMember.name;
+      
+    setFormData(prev => ({
+      ...prev,
+      priestName: displayName
+    }));
+    
+    setIsDropdownOpen(false);
+    setSearchTerm("");
+    setShowAddNew(false);
+    
+    // Clear priest name error if it exists
+    if (errors.priestName) {
+      setErrors(prev => ({
+        ...prev,
+        priestName: ""
+      }));
+    }
+  };
+
+  const handleAddNewPriest = () => {
+    if (newPriestName.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        priestName: newPriestName.trim()
+      }));
+      
+      setIsDropdownOpen(false);
+      setShowAddNew(false);
+      setNewPriestName("");
+      setSearchTerm("");
+      
+      // Clear priest name error if it exists
+      if (errors.priestName) {
+        setErrors(prev => ({
+          ...prev,
+          priestName: ""
+        }));
+      }
+    }
+  };
+
+  const formatStaffDisplay = (staff: ParishStaff) => {
+    if (staff.title) {
+      return `${staff.title} ${staff.name}`;
+    }
+    return staff.name;
   };
 
   const validateForm = (): boolean => {
@@ -136,6 +262,9 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
           baptismDate: "",
           priestName: "",
         });
+        setSearchTerm("");
+        setNewPriestName("");
+        setShowAddNew(false);
         
         onSuccess();
         onClose();
@@ -145,7 +274,6 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
       
     } catch (error) {
       console.error("Error creating record:", error);
-      // TODO: Show error toast with the actual error message
       alert(`Error: ${error instanceof Error ? error.message : "Failed to create record"}`);
     } finally {
       setIsSubmitting(false);
@@ -154,6 +282,21 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
 
   const handleClose = () => {
     if (!isSubmitting) {
+      // Reset all states when closing
+      setFormData({
+        childName: "",
+        fatherName: "",
+        motherName: "",
+        birthDate: "",
+        birthPlace: "",
+        baptismDate: "",
+        priestName: "",
+      });
+      setErrors({});
+      setSearchTerm("");
+      setNewPriestName("");
+      setShowAddNew(false);
+      setIsDropdownOpen(false);
       onClose();
     }
   };
@@ -174,9 +317,9 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full">
                 <Plus className="w-6 h-6 text-blue-600" />
@@ -188,14 +331,39 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
             <button
               onClick={handleClose}
               disabled={isSubmitting}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#9ca3af',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                padding: '8px',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: isSubmitting ? 0.5 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting) {
+                  (e.target as HTMLButtonElement).style.backgroundColor = '#f3f4f6';
+                  (e.target as HTMLButtonElement).style.color = '#374151';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSubmitting) {
+                  (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLButtonElement).style.color = '#9ca3af';
+                }
+              }}
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Form - Scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Child Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
@@ -337,20 +505,112 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
                 Church Official
               </h3>
               
-              <div>
+              <div className="relative" ref={dropdownRef}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Officiating Priest's Name *
+                  Officiating Priest *
                 </label>
-                <input
-                  type="text"
-                  name="priestName"
-                  value={formData.priestName}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                
+                {/* Dropdown Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  disabled={staffLoading}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left flex items-center justify-between ${
                     errors.priestName ? "border-red-300" : "border-gray-300"
-                  }`}
-                  placeholder="Enter priest's full name"
-                />
+                  } ${staffLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-gray-400"}`}
+                >
+                  <span className={formData.priestName ? "text-gray-900" : "text-gray-500"}>
+                    {staffLoading 
+                      ? "Loading parish staff..." 
+                      : formData.priestName || "Select a priest"
+                    }
+                  </span>
+                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${
+                    isDropdownOpen ? 'rotate-180' : ''
+                  }`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && !staffLoading && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden">
+                    {/* Search Input */}
+                    <div className="p-3 border-b border-gray-200">
+                      <input
+                        type="text"
+                        placeholder="Search parish staff..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+
+                    {/* Staff List */}
+                    <div className="max-h-40 overflow-y-auto">
+                      {filteredStaff.length > 0 ? (
+                        filteredStaff.map((staff) => (
+                          <button
+                            key={staff.id}
+                            type="button"
+                            onClick={() => handlePriestSelect(staff)}
+                            className="w-full px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors duration-150"
+                          >
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatStaffDisplay(staff)}
+                            </div>
+                            {staff.role && (
+                              <div className="text-xs text-gray-500 mt-1">{staff.role}</div>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                          {searchTerm ? "No staff found matching your search" : "No parish staff available"}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Add New Option */}
+                    <div className="border-t border-gray-200 bg-gray-50">
+                      {!showAddNew ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddNew(true)}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center space-x-2 text-blue-600 transition-colors duration-150"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          <span className="text-sm font-medium">Add new priest</span>
+                        </button>
+                      ) : (
+                        <div className="p-3">
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              placeholder="Enter priest name"
+                              value={newPriestName}
+                              onChange={(e) => setNewPriestName(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleAddNewPriest();
+                                }
+                              }}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddNewPriest}
+                              disabled={!newPriestName.trim()}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors duration-150"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {errors.priestName && (
                   <p className="mt-1 text-sm text-red-600">{errors.priestName}</p>
                 )}
@@ -439,7 +699,8 @@ const AddRecordModal: React.FC<AddRecordModalProps> = ({
                 )}
               </button>
             </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
       
