@@ -1,9 +1,9 @@
 import React from "react";
-import { Users, Trash2, Edit2 } from "lucide-react";
+import { Users, Trash2, Edit2, CheckCircle } from "lucide-react"; // ADD CheckCircle import
 
 interface ToastNotificationProps {
   message: string;
-  type: "success" | "delete" | "update";
+  type: "success" | "delete" | "update" | "login"; // ADD "login" type
   onDismiss: () => void;
 }
 
@@ -14,10 +14,19 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({
 }) => {
   const isDelete = type === "delete";
   const isUpdate = type === "update";
-  const Icon = isDelete ? Trash2 : isUpdate ? Edit2 : Users;
-  const iconColor = isDelete ? "text-red-500" : isUpdate ? "text-blue-500" : "text-green-500";
-  const progressColor = isDelete ? "bg-red-500" : isUpdate ? "bg-blue-500" : "bg-green-500";
-  const title = isDelete ? "Record Deleted" : isUpdate ? "Record Updated" : "Record Created";
+  const isLogin = type === "login"; // ADD this line
+  
+  // UPDATE the Icon logic to include login
+  const Icon = isDelete ? Trash2 : isUpdate ? Edit2 : isLogin ? CheckCircle : Users;
+  
+  // UPDATE the iconColor logic to include login
+  const iconColor = isDelete ? "text-red-500" : isUpdate ? "text-blue-500" : isLogin ? "text-green-500" : "text-green-500";
+  
+  // UPDATE the progressColor logic to include login
+  const progressColor = isDelete ? "bg-red-500" : isUpdate ? "bg-blue-500" : isLogin ? "bg-green-500" : "bg-green-500";
+  
+  // UPDATE the title logic to include login
+  const title = isDelete ? "Record Deleted" : isUpdate ? "Record Updated" : isLogin ? "Login Successful" : "Record Created";
 
   return (
     <div 
@@ -44,26 +53,30 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({
             <button
               onClick={onDismiss}
               style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: '#9ca3af',
-                cursor: 'pointer',
-                padding: '4px',
-                borderRadius: '4px',
-                transition: 'color 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                fontSize: '16px',
-                fontWeight: 'bold'
+                backgroundColor: '#f3f4f6 !important',
+                border: '1px solid #d1d5db !important',
+                color: '#374151 !important',
+                cursor: 'pointer !important',
+                padding: '4px !important',
+                borderRadius: '6px !important',
+                transition: 'all 0.2s ease !important',
+                display: 'flex !important',
+                alignItems: 'center !important',
+                justifyContent: 'center !important',
+                width: '28px !important',
+                height: '28px !important',
+                fontSize: '18px !important',
+                fontWeight: 'bold !important',
+                lineHeight: '1 !important',
+                fontFamily: 'Arial, sans-serif !important'
               }}
               onMouseEnter={(e) => {
-                (e.target as HTMLButtonElement).style.color = '#4b5563';
+                (e.target as HTMLButtonElement).style.setProperty('background-color', '#e5e7eb', 'important');
+                (e.target as HTMLButtonElement).style.setProperty('color', '#111827', 'important');
               }}
               onMouseLeave={(e) => {
-                (e.target as HTMLButtonElement).style.color = '#9ca3af';
+                (e.target as HTMLButtonElement).style.setProperty('background-color', '#f3f4f6', 'important');
+                (e.target as HTMLButtonElement).style.setProperty('color', '#374151', 'important');
               }}
             >
               ×

@@ -7,9 +7,15 @@ async function updateBaptismRecord() {
     // Get command line arguments
     const args = process.argv.slice(2);
 
+    // Debug: Log the actual arguments received
+    console.error(
+      `🔍 [updateRecord.js] Received ${args.length} arguments:`,
+      args
+    );
+
     if (args.length < 9) {
       throw new Error(
-        "Missing required arguments. Expected: recordId, childName, fatherName, motherName, birthDate, birthPlace, baptismDate, priestName, updatedBy"
+        `Missing required arguments. Expected 9, got ${args.length}. Expected: record_id, child_name, father_name, mother_name, birth_date, birth_place, baptism_date, priest_name, updated_by`
       );
     }
 
@@ -29,11 +35,11 @@ async function updateBaptismRecord() {
     const parsedUpdatedBy = parseInt(updatedBy);
 
     if (isNaN(recordId)) {
-      throw new Error("Invalid record ID");
+      throw new Error(`Invalid record_id: ${recordIdStr}`);
     }
 
     if (isNaN(parsedUpdatedBy)) {
-      throw new Error("Invalid updatedBy user ID");
+      throw new Error(`Invalid updated_by user ID: ${updatedBy}`);
     }
 
     console.error(
@@ -46,6 +52,7 @@ async function updateBaptismRecord() {
         birthPlace,
         baptismDate,
         priestName,
+        updatedBy: parsedUpdatedBy,
       }
     );
 

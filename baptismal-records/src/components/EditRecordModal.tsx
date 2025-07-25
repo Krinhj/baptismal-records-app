@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { X, Save, Calendar, User, MapPin, Church } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, Save, Calendar, User, MapPin, Church, ChevronDown, UserPlus } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface BaptismRecord {
@@ -22,6 +22,34 @@ interface EditRecordModalProps {
   onSuccess: () => void;
 }
 
+interface ParishStaff {
+  id: number;
+  name: string;
+  title: string | null;
+  role: string | null;
+  active: boolean;
+}
+
+// Helper function to format dates for HTML date inputs
+const formatDateForInput = (dateString: string): string => {
+  if (!dateString) return "";
+  
+  // If it's already in YYYY-MM-DD format, return as is
+  if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return dateString;
+  }
+  
+  // If it's an ISO string, convert to YYYY-MM-DD
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  
+  // Convert to YYYY-MM-DD format
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const EditRecordModal: React.FC<EditRecordModalProps> = ({
   isOpen,
   record,
@@ -40,21 +68,87 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Populate form when record changes
+  // Parish Staff dropdown states
+  const [parishStaff, setParishStaff] = useState<ParishStaff[]>([]);
+  const [filteredStaff, setFilteredStaff] = useState<ParishStaff[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAddNew, setShowAddNew] = useState(false);
+  const [newPriestName, setNewPriestName] = useState("");
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load parish staff when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchParishStaff();
+    }
+  }, [isOpen]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+        setShowAddNew(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter staff based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredStaff(parishStaff);
+    } else {
+      const filtered = parishStaff.filter(staff => 
+        staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (staff.title && staff.title.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredStaff(filtered);
+    }
+  }, [searchTerm, parishStaff]);
+
+  // Populate form when record changes - FIXED TO FORMAT DATES
   useEffect(() => {
     if (record) {
       setFormData({
         childName: record.childName || "",
         fatherName: record.fatherName || "",
         motherName: record.motherName || "",
-        birthDate: record.birthDate || "",
+        birthDate: formatDateForInput(record.birthDate), // Format the date properly
         birthPlace: record.birthPlace || "",
-        baptismDate: record.baptismDate || "",
+        baptismDate: formatDateForInput(record.baptismDate), // Format the date properly
         priestName: record.priestName || "",
       });
       setErrors({});
     }
   }, [record]);
+
+  const fetchParishStaff = async () => {
+    try {
+      setStaffLoading(true);
+      const response = await invoke('get_parish_staff');
+      const result = JSON.parse(response as string);
+      
+      if (result.success) {
+        // Only show active staff members
+        const activeStaff = result.staff.filter((staff: ParishStaff) => staff.active);
+        setParishStaff(activeStaff);
+        setFilteredStaff(activeStaff);
+      } else {
+        console.error("Failed to fetch parish staff:", result.error);
+      }
+    } catch (error) {
+      console.error("Error fetching parish staff:", error);
+    } finally {
+      setStaffLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -70,6 +164,58 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         [name]: ""
       }));
     }
+  };
+
+  const handlePriestSelect = (staffMember: ParishStaff) => {
+    const displayName = staffMember.title 
+      ? `${staffMember.title} ${staffMember.name}`
+      : staffMember.name;
+      
+    setFormData(prev => ({
+      ...prev,
+      priestName: displayName
+    }));
+    
+    setIsDropdownOpen(false);
+    setSearchTerm("");
+    setShowAddNew(false);
+    
+    // Clear priest name error if it exists
+    if (errors.priestName) {
+      setErrors(prev => ({
+        ...prev,
+        priestName: ""
+      }));
+    }
+  };
+
+  const handleAddNewPriest = () => {
+    if (newPriestName.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        priestName: newPriestName.trim()
+      }));
+      
+      setIsDropdownOpen(false);
+      setShowAddNew(false);
+      setNewPriestName("");
+      setSearchTerm("");
+      
+      // Clear priest name error if it exists
+      if (errors.priestName) {
+        setErrors(prev => ({
+          ...prev,
+          priestName: ""
+        }));
+      }
+    }
+  };
+
+  const formatStaffDisplay = (staff: ParishStaff) => {
+    if (staff.title) {
+      return `${staff.title} ${staff.name}`;
+    }
+    return staff.name;
   };
 
   const validateForm = () => {
@@ -114,7 +260,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     // Get current user from localStorage (same way as Dashboard)
     const userData = localStorage.getItem("user");
     if (!userData) {
-      setErrors({ submit: 'User session expired. Please log in again'});
+      setErrors({ submit: 'User session expired. Please log in again.' });
       return;
     }
 
@@ -122,8 +268,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     try {
       currentUser = JSON.parse(userData);
     } catch (error) {
-      console.error("Error parsing user data: ", error);
-      setErrors({ submit: 'Invalid user session. Please log in again.'});
+      console.error("Error parsing user data:", error);
+      setErrors({ submit: 'Invalid user session. Please log in again.' });
       return;
     }
 
@@ -131,8 +277,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
 
     try {
       const response = await invoke('update_baptism_record', {
-        record_id: record.id,
-        updated_data: {
+        recordId: record.id,
+        updatedData: {  // Changed to camelCase
           child_name: formData.childName.trim(),
           father_name: formData.fatherName.trim() || null,
           mother_name: formData.motherName.trim() || null,
@@ -141,7 +287,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
           baptism_date: formData.baptismDate,
           priest_name: formData.priestName.trim(),
         },
-        updated_by: currentUser.id
+        updatedBy: currentUser.id  // Changed to camelCase
       });
 
       const result = JSON.parse(response as string);
@@ -175,6 +321,10 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         priestName: "",
       });
       setErrors({});
+      setSearchTerm("");
+      setNewPriestName("");
+      setShowAddNew(false);
+      setIsDropdownOpen(false);
       onClose();
     }
   };
@@ -362,23 +512,114 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 )}
               </div>
 
-              {/* Priest Name */}
-              <div>
+              {/* Priest Name - Updated to use dropdown */}
+              <div className="relative" ref={dropdownRef}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Church className="w-4 h-4 inline mr-2" />
                   Priest Name *
                 </label>
-                <input
-                  type="text"
-                  name="priestName"
-                  value={formData.priestName}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.priestName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Enter priest's name"
-                />
+                
+                {/* Dropdown Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  disabled={staffLoading || loading}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left flex items-center justify-between ${
+                    errors.priestName ? "border-red-500" : "border-gray-300"
+                  } ${staffLoading || loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-gray-400"}`}
+                >
+                  <span className={formData.priestName ? "text-gray-900" : "text-gray-500"}>
+                    {staffLoading 
+                      ? "Loading parish staff..." 
+                      : formData.priestName || "Select a priest"
+                    }
+                  </span>
+                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${
+                    isDropdownOpen ? 'rotate-180' : ''
+                  }`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && !staffLoading && !loading && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden">
+                    {/* Search Input */}
+                    <div className="p-3 border-b border-gray-200">
+                      <input
+                        type="text"
+                        placeholder="Search parish staff..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+
+                    {/* Staff List */}
+                    <div className="max-h-40 overflow-y-auto">
+                      {filteredStaff.length > 0 ? (
+                        filteredStaff.map((staff) => (
+                          <button
+                            key={staff.id}
+                            type="button"
+                            onClick={() => handlePriestSelect(staff)}
+                            className="w-full px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors duration-150"
+                          >
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatStaffDisplay(staff)}
+                            </div>
+                            {staff.role && (
+                              <div className="text-xs text-gray-500 mt-1">{staff.role}</div>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                          {searchTerm ? "No staff found matching your search" : "No parish staff available"}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Add New Option */}
+                    <div className="border-t border-gray-200 bg-gray-50">
+                      {!showAddNew ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddNew(true)}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center space-x-2 text-blue-600 transition-colors duration-150"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          <span className="text-sm font-medium">Add new priest</span>
+                        </button>
+                      ) : (
+                        <div className="p-3">
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              placeholder="Enter priest name"
+                              value={newPriestName}
+                              onChange={(e) => setNewPriestName(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleAddNewPriest();
+                                }
+                              }}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddNewPriest}
+                              disabled={!newPriestName.trim()}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors duration-150"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {errors.priestName && (
                   <p className="mt-1 text-sm text-red-600">{errors.priestName}</p>
                 )}

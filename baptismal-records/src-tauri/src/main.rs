@@ -162,9 +162,9 @@ struct UpdateBaptismRecord {
 
 #[tauri::command]
 fn update_baptism_record(
-    record_id: i32,
-    updated_data: UpdateBaptismRecord,
-    updated_by: i32,  // ADD THIS NEW PARAMETER
+    recordId: i32,
+    updatedData: UpdateBaptismRecord,  // Changed to camelCase
+    updatedBy: i32,                   // Changed to camelCase
 ) -> Result<String, String> {
     // Build absolute path to the JS file
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -179,15 +179,15 @@ fn update_baptism_record(
 
     let output = Command::new("node")
         .arg(&script)
-        .arg(&record_id.to_string())
-        .arg(&updated_data.child_name)
-        .arg(updated_data.father_name.unwrap_or_default())
-        .arg(updated_data.mother_name.unwrap_or_default())
-        .arg(&updated_data.birth_date)
-        .arg(&updated_data.birth_place)
-        .arg(&updated_data.baptism_date)
-        .arg(&updated_data.priest_name)
-        .arg(&updated_by.to_string())  // ADD THIS NEW ARGUMENT
+        .arg(&recordId.to_string())
+        .arg(&updatedData.child_name)
+        .arg(updatedData.father_name.unwrap_or_default())
+        .arg(updatedData.mother_name.unwrap_or_default())
+        .arg(&updatedData.birth_date)
+        .arg(&updatedData.birth_place)
+        .arg(&updatedData.baptism_date)
+        .arg(&updatedData.priest_name)
+        .arg(&updatedBy.to_string())  // Changed to updatedBy
         .output()
         .map_err(|e| format!("Failed to execute node process: {}", e))?;
 

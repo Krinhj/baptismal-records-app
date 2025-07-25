@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import LoginPage from "./pages/LoginPage";
 import Dashboard   from "./pages/Dashboard";
-import AddRecord   from "./pages/AddRecord";
 import ViewRecords from "./pages/ViewRecords";
 import ManageParishStaff from "./pages/ManageParishStaff";
 import AuditLogs from "./pages/AuditLogs";
@@ -36,8 +35,6 @@ export default function App() {
   switch (currentPath) {
     case "/dashboard":
       return <Dashboard />;
-    case "/add-record":
-      return <AddRecord />;
     case "/view-records":
       return <ViewRecords />;
     case "/manage-parish-staff":

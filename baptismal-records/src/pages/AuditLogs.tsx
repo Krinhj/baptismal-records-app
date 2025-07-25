@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from "@tauri-apps/api/core";
-import { Search, Filter, Eye, AlertCircle, Clock, FileText, ArrowLeft } from 'lucide-react';
+import { Search, Filter, Eye, AlertCircle, Clock, FileText } from 'lucide-react';
 import ToastNotification from '../components/ToastNotification';
 
 interface AuditLog {
@@ -50,7 +50,8 @@ const AuditLogs: React.FC = () => {
     searchTerm: ''
   });
 
-  const actions = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'];
+  // Updated actions array - removed LOGIN and LOGOUT since they're not tracked
+  const actions = ['CREATE', 'UPDATE', 'DELETE'];
   const tables = ['BaptismRecord', 'ParishStaff', 'User'];
 
   useEffect(() => {
@@ -176,11 +177,6 @@ const AuditLogs: React.FC = () => {
     });
   };
 
-  const handleBackToDashboard = () => {
-    window.history.pushState({}, "", "/dashboard");
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
@@ -200,10 +196,7 @@ const AuditLogs: React.FC = () => {
         return { color: '#2563eb', backgroundColor: '#eff6ff' };
       case 'DELETE': 
         return { color: '#dc2626', backgroundColor: '#fef2f2' };
-      case 'LOGIN': 
-        return { color: '#9333ea', backgroundColor: '#faf5ff' };
-      case 'LOGOUT': 
-        return { color: '#4b5563', backgroundColor: '#f9fafb' };
+      // Removed LOGIN and LOGOUT cases since they're not used
       default: 
         return { color: '#4b5563', backgroundColor: '#f9fafb' };
     }
@@ -228,44 +221,47 @@ const AuditLogs: React.FC = () => {
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <AlertCircle size={28} style={{ color: '#ef4444' }} />
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-            System Audit Logs
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertCircle size={28} style={{ color: '#ef4444' }} />
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
+              System Audit Logs
+            </h1>
+          </div>
+          
+          {/* Back to Dashboard Button - Better positioned */}
+          <button
+            onClick={() => {
+              window.history.pushState({}, "", "/dashboard");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#f3f4f6',
+              color: '#4b5563',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#e5e7eb';
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#f3f4f6';
+            }}
+          >
+            <span>← Back to Dashboard</span>
+          </button>
         </div>
         <p style={{ color: '#6b7280', fontSize: '16px', margin: 0 }}>
           Debug feature for SUPER_ADMIN - Monitor all system activities and user actions
         </p>
-
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={handleBackToDashboard}
-                style={{
-                  backgroundColor: '#f3f4f6',
-                  color: '#4b5563',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = '#e5e7eb';
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = '#f3f4f6';
-                }}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
-              </button>
-            </div>
       </div>
 
       {/* Filters Section */}
@@ -338,7 +334,7 @@ const AuditLogs: React.FC = () => {
             </select>
           </div>
 
-          {/* Action Filter */}
+          {/* Action Filter - Updated to only show CREATE, UPDATE, DELETE */}
           <div>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
               Action

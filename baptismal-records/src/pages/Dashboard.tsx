@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   BookOpen,
   PlusCircle,
@@ -8,15 +8,16 @@ import {
   LogOut,
   CheckCircle,
   X,
-  AlertCircle, // ADD THIS IMPORT FOR AUDIT LOGS ICON
+  AlertCircle,
 } from "lucide-react";
-import AddRecordModal from "../components/AddRecordModal"; // Import the modal component
+import AddRecordModal from "../components/AddRecordModal";
+import ToastNotification from "../components/ToastNotification"; // ADD THIS IMPORT
 
 // Define the User type for type safety
 interface User {
   id: number;
   name: string;
-  username: string;  // Changed from email
+  username: string;
   role: string;
 }
 
@@ -29,7 +30,7 @@ const CARDS = [
     bgColor: "bg-blue-50",
     iconBg: "bg-blue-100",
     action: "navigate",
-    roles: ["SUPER_ADMIN", "ADMIN", "USER"] // Available to all roles
+    roles: ["SUPER_ADMIN", "ADMIN", "USER"]
   },
   { 
     title: "Add New Record", 
@@ -39,7 +40,7 @@ const CARDS = [
     bgColor: "bg-green-50",
     iconBg: "bg-green-100",
     action: "modal",
-    roles: ["SUPER_ADMIN", "ADMIN", "USER"] // Available to all roles
+    roles: ["SUPER_ADMIN", "ADMIN", "USER"]
   },
   { 
     title: "Manage Parish Staff", 
@@ -49,17 +50,17 @@ const CARDS = [
     bgColor: "bg-orange-50",
     iconBg: "bg-orange-100",
     action: "navigate",
-    roles: ["SUPER_ADMIN"] // Only SUPER_ADMIN can see this
+    roles: ["SUPER_ADMIN"]
   },
   { 
-    title: "System Audit Logs", // ADD THIS NEW CARD
+    title: "System Audit Logs",
     subtitle: "Debug feature - Monitor all system activities",
     icon: <AlertCircle size={32} className="text-red-500" />, 
     path: "/audit-logs",
     bgColor: "bg-red-50",
     iconBg: "bg-red-100",
     action: "navigate",
-    roles: ["SUPER_ADMIN"] // Only SUPER_ADMIN can see this debug feature
+    roles: ["SUPER_ADMIN"]
   },
   { 
     title: "Backup Database", 
@@ -69,15 +70,17 @@ const CARDS = [
     bgColor: "bg-purple-50",
     iconBg: "bg-purple-100",
     action: "navigate",
-    roles: ["SUPER_ADMIN", "ADMIN"] // SUPER_ADMIN and ADMIN only
+    roles: ["SUPER_ADMIN", "ADMIN"]
   }
 ];
 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
-  const [showToast, setShowToast] = useState(false); // Changed default to false
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
-  const [successToast, setSuccessToast] = useState<string | null>(null); // Success toast state
+  const [showLoginToast, setShowLoginToast] = useState<string | null>(null); // CHANGED: Use string like other toasts
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Remove the useRef - we don't need manual timer management anymore
 
   useEffect(() => {
     // Get user data from localStorage
@@ -90,15 +93,13 @@ export default function Dashboard() {
         // Only show login toast if this is a fresh login (not navigation)
         const isFromLogin = sessionStorage.getItem("justLoggedIn");
         if (isFromLogin) {
-          setShowToast(true);
+          setShowLoginToast(`Welcome back, ${parsedUser.name}!`); // CHANGED: Set message like other toasts
           sessionStorage.removeItem("justLoggedIn"); // Remove flag after showing toast
           
-          // Auto-dismiss toast after 4 seconds
-          const toastTimer = setTimeout(() => {
-            setShowToast(false);
+          // Add the setTimeout like in ViewRecords.tsx
+          setTimeout(() => {
+            setShowLoginToast(null);
           }, 4000);
-          
-          return () => clearTimeout(toastTimer);
         }
       } catch (error) {
         console.error("Error parsing user data:", error);
@@ -117,8 +118,8 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  const dismissToast = () => {
-    setShowToast(false);
+  const dismissLoginToast = () => {
+    setShowLoginToast(null);
   };
 
   const dismissSuccessToast = () => {
@@ -143,7 +144,7 @@ export default function Dashboard() {
   const handleRecordSuccess = () => {
     setSuccessToast("Baptismal record created successfully!");
     
-    // Auto-dismiss success toast after 4 seconds
+    // Add the setTimeout like in ViewRecords.tsx
     setTimeout(() => {
       setSuccessToast(null);
     }, 4000);
@@ -288,94 +289,22 @@ export default function Dashboard() {
         onSuccess={handleRecordSuccess}
       />
 
-      {/* Login Success Toast */}
-      {showToast && (
-        <div 
-          className="fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg max-w-sm"
-          style={{
-            animation: 'slideInFromRight 0.3s ease-out',
-            zIndex: 50
-          }}
-        >
-          <div className="p-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <CheckCircle className="w-6 h-6 text-green-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">
-                  Login Successful
-                </p>
-                <p className="text-sm text-gray-500">
-                  Welcome back, {user.name}!
-                </p>
-              </div>
-              <div className="flex-shrink-0">
-                <button
-                  onClick={dismissToast}
-                  className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors duration-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div className="mt-3 bg-gray-200 rounded-full h-1">
-              <div 
-                className="bg-green-500 h-1 rounded-full"
-                style={{
-                  width: '100%',
-                  animation: 'progressBar 4s linear forwards'
-                }}
-              ></div>
-            </div>
-          </div>
-        </div>
+      {/* Login Success Toast - Now using ToastNotification with login type */}
+      {showLoginToast && (
+        <ToastNotification
+          message={showLoginToast}
+          type="login"
+          onDismiss={dismissLoginToast}
+        />
       )}
 
       {/* Record Creation Success Toast */}
       {successToast && (
-        <div 
-          className="fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg max-w-sm"
-          style={{
-            animation: 'slideInFromRight 0.3s ease-out',
-            zIndex: 50
-          }}
-        >
-          <div className="p-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <CheckCircle className="w-6 h-6 text-green-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">
-                  Record Created
-                </p>
-                <p className="text-sm text-gray-500">
-                  {successToast}
-                </p>
-              </div>
-              <div className="flex-shrink-0">
-                <button
-                  onClick={dismissSuccessToast}
-                  className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors duration-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div className="mt-3 bg-gray-200 rounded-full h-1">
-              <div 
-                className="bg-green-500 h-1 rounded-full"
-                style={{
-                  width: '100%',
-                  animation: 'progressBar 4s linear forwards'
-                }}
-              ></div>
-            </div>
-          </div>
-        </div>
+        <ToastNotification
+          message={successToast}
+          type="success"
+          onDismiss={dismissSuccessToast}
+        />
       )}
 
       {/* Inline styles for animations */}
