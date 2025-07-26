@@ -1,9 +1,9 @@
 import React from "react";
-import { Users, Trash2, Edit2, CheckCircle } from "lucide-react"; // ADD CheckCircle import
+import { Users, Trash2, Edit2, CheckCircle, Database, Upload } from "lucide-react"; // ADD Database, Upload imports
 
 interface ToastNotificationProps {
   message: string;
-  type: "success" | "delete" | "update" | "login"; // ADD "login" type
+  type: "success" | "delete" | "update" | "login" | "backup" | "restore"; // ADD "backup" and "restore" types
   onDismiss: () => void;
 }
 
@@ -14,19 +14,41 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({
 }) => {
   const isDelete = type === "delete";
   const isUpdate = type === "update";
-  const isLogin = type === "login"; // ADD this line
+  const isLogin = type === "login";
+  const isBackup = type === "backup"; // ADD this line
+  const isRestore = type === "restore"; // ADD this line
   
-  // UPDATE the Icon logic to include login
-  const Icon = isDelete ? Trash2 : isUpdate ? Edit2 : isLogin ? CheckCircle : Users;
+  // UPDATE the Icon logic to include backup and restore
+  const Icon = isDelete ? Trash2 : 
+               isUpdate ? Edit2 : 
+               isLogin ? CheckCircle : 
+               isBackup ? Database : 
+               isRestore ? Upload : 
+               Users;
   
-  // UPDATE the iconColor logic to include login
-  const iconColor = isDelete ? "text-red-500" : isUpdate ? "text-blue-500" : isLogin ? "text-green-500" : "text-green-500";
+  // UPDATE the iconColor logic to include backup and restore
+  const iconColor = isDelete ? "text-red-500" : 
+                    isUpdate ? "text-blue-500" : 
+                    isLogin ? "text-green-500" : 
+                    isBackup ? "text-purple-500" : 
+                    isRestore ? "text-indigo-500" : 
+                    "text-green-500";
   
-  // UPDATE the progressColor logic to include login
-  const progressColor = isDelete ? "bg-red-500" : isUpdate ? "bg-blue-500" : isLogin ? "bg-green-500" : "bg-green-500";
+  // UPDATE the progressColor logic to include backup and restore
+  const progressColor = isDelete ? "bg-red-500" : 
+                        isUpdate ? "bg-blue-500" : 
+                        isLogin ? "bg-green-500" : 
+                        isBackup ? "bg-purple-500" : 
+                        isRestore ? "bg-indigo-500" : 
+                        "bg-green-500";
   
-  // UPDATE the title logic to include login
-  const title = isDelete ? "Record Deleted" : isUpdate ? "Record Updated" : isLogin ? "Login Successful" : "Record Created";
+  // UPDATE the title logic to include backup and restore
+  const title = isDelete ? "Record Deleted" : 
+                isUpdate ? "Record Updated" : 
+                isLogin ? "Login Successful" : 
+                isBackup ? "Backup Created" : 
+                isRestore ? "Database Restored" : 
+                "Record Created";
 
   return (
     <div 

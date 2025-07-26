@@ -58,29 +58,17 @@ async function importDatabase(backupPath, userId) {
 
     // Use transaction to ensure data integrity
     await prisma.$transaction(async (tx) => {
-      // Clear existing data (in reverse dependency order)
+      // Clear existing business data only (preserve users for security)
       await tx.auditLog.deleteMany();
       await tx.baptismRecord.deleteMany();
       await tx.parishStaff.deleteMany();
-      await tx.user.deleteMany();
+      // NOTE: Users table is NOT cleared to preserve authentication
 
-      // Reset auto-increment sequences
-      await tx.$executeRaw`DELETE FROM sqlite_sequence WHERE name IN ('BaptismRecord', 'ParishStaff', 'User', 'AuditLog')`;
+      // Reset auto-increment sequences for business tables only
+      await tx.$executeRaw`DELETE FROM sqlite_sequence WHERE name IN ('BaptismRecord', 'ParishStaff', 'AuditLog')`;
 
-      // Import users first (no dependencies)
-      if (users && users.length > 0) {
-        for (const user of users) {
-          await tx.user.create({
-            data: {
-              id: user.id,
-              name: user.name,
-              username: user.username,
-              password: user.password || "$2b$10$defaulthashedpassword", // Default if missing
-              role: user.role,
-            },
-          });
-        }
-      }
+      // Skip importing users (preserve existing user accounts)
+      // This prevents login issues and maintains security
 
       // Import parish staff
       if (parishStaff && parishStaff.length > 0) {
@@ -155,28 +143,29 @@ async function importDatabase(backupPath, userId) {
         oldValues: null,
         newValues: JSON.stringify({
           backupFile: path.basename(backupPath),
-          importedCounts: backupData.metadata.totalRecords || {
+          importedCounts: {
             baptismRecords: baptismRecords?.length || 0,
             parishStaff: parishStaff?.length || 0,
-            users: users?.length || 0,
             auditLogs: auditLogs?.length || 0,
+            usersPreserved: true,
           },
         }),
         notes: `Database imported from encrypted backup: ${path.basename(
           backupPath
-        )}`,
+        )} (user accounts preserved)`,
       },
     });
 
     console.log(
       JSON.stringify({
         success: true,
-        message: "Database import completed successfully",
-        importedCounts: backupData.metadata.totalRecords || {
+        message:
+          "Database import completed successfully (user accounts preserved)",
+        importedCounts: {
           baptismRecords: baptismRecords?.length || 0,
           parishStaff: parishStaff?.length || 0,
-          users: users?.length || 0,
           auditLogs: auditLogs?.length || 0,
+          usersPreserved: true,
         },
       })
     );

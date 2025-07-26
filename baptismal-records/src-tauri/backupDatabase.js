@@ -32,8 +32,8 @@ function decryptData(encryptedText) {
 
 async function backupDatabase(backupPath, userId) {
   try {
-    // Fetch all data from all tables
-    const [baptismRecords, parishStaff, users, auditLogs] = await Promise.all([
+    // Fetch business data only (exclude users for security)
+    const [baptismRecords, parishStaff, auditLogs] = await Promise.all([
       prisma.baptismRecord.findMany({
         include: {
           creator: {
@@ -42,9 +42,6 @@ async function backupDatabase(backupPath, userId) {
         },
       }),
       prisma.parishStaff.findMany(),
-      prisma.user.findMany({
-        select: { id: true, name: true, username: true, role: true }, // Exclude passwords
-      }),
       prisma.auditLog.findMany({
         include: {
           performer: {
@@ -58,17 +55,16 @@ async function backupDatabase(backupPath, userId) {
       metadata: {
         backupDate: new Date().toISOString(),
         version: "1.0",
+        note: "User accounts excluded from backup for security",
         totalRecords: {
           baptismRecords: baptismRecords.length,
           parishStaff: parishStaff.length,
-          users: users.length,
           auditLogs: auditLogs.length,
         },
       },
       data: {
         baptismRecords,
         parishStaff,
-        users,
         auditLogs,
       },
     };
@@ -90,7 +86,7 @@ async function backupDatabase(backupPath, userId) {
           backupPath: path.basename(backupPath),
           recordCounts: backupData.metadata.totalRecords,
         }),
-        notes: `Database backup created at ${backupPath}`,
+        notes: `Database backup created at ${backupPath} (users excluded)`,
       },
     });
 
@@ -98,7 +94,8 @@ async function backupDatabase(backupPath, userId) {
     console.log(
       JSON.stringify({
         success: true,
-        message: "Database backup completed successfully",
+        message:
+          "Database backup completed successfully (users excluded for security)",
         recordCounts: backupData.metadata.totalRecords,
       })
     );

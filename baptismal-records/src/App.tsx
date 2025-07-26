@@ -6,6 +6,7 @@ import ManageParishStaff from "./pages/ManageParishStaff";
 import AuditLogs from "./pages/AuditLogs";
 import BackupRestore from "./pages/BackupRestore";
 import Settings    from "./pages/Settings";
+import BaptismalCertificates from "./pages/BaptismalCertificates";
 
 export default function App() {
   // Use state to track current path for SPA navigation
@@ -46,6 +47,8 @@ export default function App() {
       return <BackupRestore />;
     case "/settings":
       return <Settings />;
+    case "/certificates":
+      return <BaptismalCertificates/>;
     default:
       return <LoginPage />;
   }

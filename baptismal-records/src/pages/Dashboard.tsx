@@ -10,6 +10,7 @@ import {
   X,
   AlertCircle,
   Settings,
+  FileText,
 } from "lucide-react";
 import AddRecordModal from "../components/AddRecordModal";
 import ToastNotification from "../components/ToastNotification"; // ADD THIS IMPORT
@@ -75,13 +76,23 @@ const CARDS = [
   },
   {
     title: "Settings",
-    subtitle: "Configure App",
-    icon: <Settings size={32} className="text-white" />,
+    subtitle: "Configure application preferences",
+    icon: <Settings size={32} className="text-violet-500" />,
     path: "/settings",
-    bgColor: "bg-gray-200",
-    iconBg: "bg-gray-400",
+    bgColor: "bg-violet-50",
+    iconBg: "bg-violet-100",
     action: "navigate",
     roles: ["SUPER_ADMIN", "ADMIN"]
+  },
+  { 
+    title: "Generate Certificate", 
+    subtitle: "Create baptismal certificates from records",
+    icon: <FileText size={32} className="text-amber-500" />, 
+    path: "/certificates",
+    bgColor: "bg-amber-50",
+    iconBg: "bg-amber-100",
+    action: "navigate",
+    roles: ["SUPER_ADMIN", "ADMIN", "USER"]
   }
 ];
 
