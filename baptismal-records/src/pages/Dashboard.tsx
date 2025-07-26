@@ -9,6 +9,7 @@ import {
   CheckCircle,
   X,
   AlertCircle,
+  Settings,
 } from "lucide-react";
 import AddRecordModal from "../components/AddRecordModal";
 import ToastNotification from "../components/ToastNotification"; // ADD THIS IMPORT
@@ -63,12 +64,22 @@ const CARDS = [
     roles: ["SUPER_ADMIN"]
   },
   { 
-    title: "Backup Database", 
-    subtitle: "Create a backup of your records",
+    title: "Backup and Restore", 
+    subtitle: "Create backups and restore your records",
     icon: <Database size={32} className="text-purple-500" />, 
     path: "/backup",
     bgColor: "bg-purple-50",
     iconBg: "bg-purple-100",
+    action: "navigate",
+    roles: ["SUPER_ADMIN", "ADMIN"]
+  },
+  {
+    title: "Settings",
+    subtitle: "Configure App",
+    icon: <Settings size={32} className="text-white" />,
+    path: "/settings",
+    bgColor: "bg-gray-200",
+    iconBg: "bg-gray-400",
     action: "navigate",
     roles: ["SUPER_ADMIN", "ADMIN"]
   }

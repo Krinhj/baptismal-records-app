@@ -4,6 +4,7 @@ import Dashboard   from "./pages/Dashboard";
 import ViewRecords from "./pages/ViewRecords";
 import ManageParishStaff from "./pages/ManageParishStaff";
 import AuditLogs from "./pages/AuditLogs";
+import BackupRestore from "./pages/BackupRestore";
 import Settings    from "./pages/Settings";
 
 export default function App() {
@@ -41,6 +42,8 @@ export default function App() {
       return <ManageParishStaff />;
     case "/audit-logs":
       return <AuditLogs />;
+    case "/backup":
+      return <BackupRestore />;
     case "/settings":
       return <Settings />;
     default:

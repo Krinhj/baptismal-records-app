@@ -1,67 +1,72 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{generate_handler, Builder, generate_context};
 use std::{path::PathBuf, process::Command};
+use tauri::{generate_context, generate_handler, Builder};
 
 fn main() {
-  Builder::default()
-    // register all your commands here:
-    .invoke_handler(generate_handler![
-        // Auth Commands
-        login_user,
-        // Baptismal Record Commands 
-        create_baptism_record, 
-        get_baptism_records, 
-        update_baptism_record, 
-        delete_baptism_record,
-        // Parish Management Commands
-        create_parish_staff,
-        get_parish_staff,
-        update_parish_staff,
-        delete_parish_staff,
-        // Audit Commands
-        get_audit_logs,
-        get_all_users       
+    Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        // register all your commands here:
+        .invoke_handler(generate_handler![
+            // Auth Commands
+            login_user,
+            // Baptismal Record Commands
+            create_baptism_record,
+            get_baptism_records,
+            update_baptism_record,
+            delete_baptism_record,
+            // Parish Management Commands
+            create_parish_staff,
+            get_parish_staff,
+            update_parish_staff,
+            delete_parish_staff,
+            // Audit Commands
+            get_audit_logs,
+            get_all_users,
+            // Backup Database Commands
+            backup_database,
+            import_database
         ])
-    .run(generate_context!())
-    .expect("error while running tauri application");
+        .run(generate_context!())
+        .expect("error while running tauri application");
 }
 
 #[tauri::command]
 fn login_user(username: String, password: String) -> Result<String, String> {
-  // Build absolute path to the JS file
-  let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-  script.push("validateUser.js");
-  println!("🔍 [login_user] launching script at: {}", script.display());
+    // Build absolute path to the JS file
+    let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    script.push("validateUser.js");
+    println!("🔍 [login_user] launching script at: {}", script.display());
 
-  // Also show working dir
-  match std::env::current_dir() {
-    Ok(cwd) => println!("🔍 [login_user] cwd: {}", cwd.display()),
-    Err(e)  => println!("⚠️  [login_user] failed to get cwd: {}", e),
-  }
+    // Also show working dir
+    match std::env::current_dir() {
+        Ok(cwd) => println!("🔍 [login_user] cwd: {}", cwd.display()),
+        Err(e) => println!("⚠️  [login_user] failed to get cwd: {}", e),
+    }
 
-  let output = Command::new("node")
-    .arg(&script)
-    .arg(&username)
-    .arg(&password)
-    .output()
-    .map_err(|e| format!("Failed to execute node process: {}", e))?;
+    let output = Command::new("node")
+        .arg(&script)
+        .arg(&username)
+        .arg(&password)
+        .output()
+        .map_err(|e| format!("Failed to execute node process: {}", e))?;
 
-  println!(
-    "🔍 [login_user] node exit: {} (stdout: {:?}, stderr: {:?})",
-    output.status,
-    String::from_utf8_lossy(&output.stdout),
-    String::from_utf8_lossy(&output.stderr)
-  );
+    println!(
+        "🔍 [login_user] node exit: {} (stdout: {:?}, stderr: {:?})",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 
-  if output.status.success() {
-    let user_data = String::from_utf8_lossy(&output.stdout);
-    Ok(user_data.trim().to_string())
-  } else {
-    let error_msg = String::from_utf8_lossy(&output.stderr);
-    Err(format!("Authentication failed: {}", error_msg))
-  }
+    if output.status.success() {
+        let user_data = String::from_utf8_lossy(&output.stdout);
+        Ok(user_data.trim().to_string())
+    } else {
+        let error_msg = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Authentication failed: {}", error_msg))
+    }
 }
 
 #[tauri::command]
@@ -75,10 +80,13 @@ fn create_baptism_record(
     priest_name: String,
     created_by: i32,
 ) -> Result<String, String> {
-    // Build absolute path to the JS file  
+    // Build absolute path to the JS file
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("createRecord.js");
-    println!("🔍 [create_baptism_record] launching script at: {}", script.display());
+    println!(
+        "🔍 [create_baptism_record] launching script at: {}",
+        script.display()
+    );
 
     // Also show working dir
     match std::env::current_dir() {
@@ -120,7 +128,10 @@ fn get_baptism_records() -> Result<String, String> {
     // Build absolute path to the JS file
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("getRecords.js");
-    println!("🔍 [get_baptism_records] launching script at: {}", script.display());
+    println!(
+        "🔍 [get_baptism_records] launching script at: {}",
+        script.display()
+    );
 
     // Also show working dir
     match std::env::current_dir() {
@@ -163,13 +174,16 @@ struct UpdateBaptismRecord {
 #[tauri::command]
 fn update_baptism_record(
     recordId: i32,
-    updatedData: UpdateBaptismRecord,  // Changed to camelCase
+    updatedData: UpdateBaptismRecord, // Changed to camelCase
     updatedBy: i32,                   // Changed to camelCase
 ) -> Result<String, String> {
     // Build absolute path to the JS file
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("updateRecord.js");
-    println!("🔍 [update_baptism_record] launching script at: {}", script.display());
+    println!(
+        "🔍 [update_baptism_record] launching script at: {}",
+        script.display()
+    );
 
     // Also show working dir
     match std::env::current_dir() {
@@ -187,7 +201,7 @@ fn update_baptism_record(
         .arg(&updatedData.birth_place)
         .arg(&updatedData.baptism_date)
         .arg(&updatedData.priest_name)
-        .arg(&updatedBy.to_string())  // Changed to updatedBy
+        .arg(&updatedBy.to_string()) // Changed to updatedBy
         .output()
         .map_err(|e| format!("Failed to execute node process: {}", e))?;
 
@@ -212,7 +226,10 @@ fn delete_baptism_record(record_id: i32, deleted_by: i32) -> Result<String, Stri
     // Build absolute path to the JS file
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("deleteRecord.js");
-    println!("🔍 [delete_baptism_record] launching script at: {}", script.display());
+    println!(
+        "🔍 [delete_baptism_record] launching script at: {}",
+        script.display()
+    );
 
     // Also show working dir
     match std::env::current_dir() {
@@ -247,14 +264,17 @@ fn delete_baptism_record(record_id: i32, deleted_by: i32) -> Result<String, Stri
 
 #[tauri::command]
 fn create_parish_staff(
-    name: String, 
-    title: Option<String>, 
+    name: String,
+    title: Option<String>,
     role: Option<String>,
-    created_by: i32  // ADD THIS NEW PARAMETER
+    created_by: i32, // ADD THIS NEW PARAMETER
 ) -> Result<String, String> {
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("createParishStaff.js");
-    println!("🔍 [create_parish_staff] launching script at: {}", script.display());
+    println!(
+        "🔍 [create_parish_staff] launching script at: {}",
+        script.display()
+    );
 
     match std::env::current_dir() {
         Ok(cwd) => println!("🔍 [create_parish_staff] cwd: {}", cwd.display()),
@@ -266,7 +286,7 @@ fn create_parish_staff(
         .arg(&name)
         .arg(title.unwrap_or_default())
         .arg(role.unwrap_or_default())
-        .arg(&created_by.to_string())  // ADD THIS NEW ARGUMENT
+        .arg(&created_by.to_string()) // ADD THIS NEW ARGUMENT
         .output()
         .map_err(|e| format!("Failed to execute node process: {}", e))?;
 
@@ -290,7 +310,10 @@ fn create_parish_staff(
 fn get_parish_staff() -> Result<String, String> {
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("getParishStaff.js");
-    println!("🔍 [get_parish_staff] launching script at: {}", script.display());
+    println!(
+        "🔍 [get_parish_staff] launching script at: {}",
+        script.display()
+    );
 
     match std::env::current_dir() {
         Ok(cwd) => println!("🔍 [get_parish_staff] cwd: {}", cwd.display()),
@@ -324,11 +347,14 @@ fn update_parish_staff(
     name: String,
     title: Option<String>,
     role: Option<String>,
-    updated_by: i32,  // ADD THIS NEW PARAMETER
+    updated_by: i32, // ADD THIS NEW PARAMETER
 ) -> Result<String, String> {
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("updateParishStaff.js");
-    println!("🔍 [update_parish_staff] launching script at: {}", script.display());
+    println!(
+        "🔍 [update_parish_staff] launching script at: {}",
+        script.display()
+    );
 
     match std::env::current_dir() {
         Ok(cwd) => println!("🔍 [update_parish_staff] cwd: {}", cwd.display()),
@@ -341,7 +367,7 @@ fn update_parish_staff(
         .arg(&name)
         .arg(title.unwrap_or_default())
         .arg(role.unwrap_or_default())
-        .arg(&updated_by.to_string())  // ADD THIS NEW ARGUMENT
+        .arg(&updated_by.to_string()) // ADD THIS NEW ARGUMENT
         .output()
         .map_err(|e| format!("Failed to execute node process: {}", e))?;
 
@@ -363,12 +389,15 @@ fn update_parish_staff(
 
 #[tauri::command]
 fn delete_parish_staff(
-    staff_id: i32, 
-    deleted_by: i32  // ADD THIS MISSING PARAMETER
+    staff_id: i32,
+    deleted_by: i32, // ADD THIS MISSING PARAMETER
 ) -> Result<String, String> {
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("deleteParishStaff.js");
-    println!("🔍 [delete_parish_staff] launching script at: {}", script.display());
+    println!(
+        "🔍 [delete_parish_staff] launching script at: {}",
+        script.display()
+    );
 
     match std::env::current_dir() {
         Ok(cwd) => println!("🔍 [delete_parish_staff] cwd: {}", cwd.display()),
@@ -378,7 +407,7 @@ fn delete_parish_staff(
     let output = Command::new("node")
         .arg(&script)
         .arg(&staff_id.to_string())
-        .arg(&deleted_by.to_string())  // This line was correct, just needed the parameter above
+        .arg(&deleted_by.to_string()) // This line was correct, just needed the parameter above
         .output()
         .map_err(|e| format!("Failed to execute node process: {}", e))?;
 
@@ -402,7 +431,10 @@ fn delete_parish_staff(
 fn get_audit_logs() -> Result<String, String> {
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("getAuditLogs.js");
-    println!("🔍 [get_audit_logs] launching script at: {}", script.display());
+    println!(
+        "🔍 [get_audit_logs] launching script at: {}",
+        script.display()
+    );
 
     match std::env::current_dir() {
         Ok(cwd) => println!("🔍 [get_audit_logs] cwd: {}", cwd.display()),
@@ -434,7 +466,10 @@ fn get_audit_logs() -> Result<String, String> {
 fn get_all_users() -> Result<String, String> {
     let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     script.push("getAllUsers.js");
-    println!("🔍 [get_all_users] launching script at: {}", script.display());
+    println!(
+        "🔍 [get_all_users] launching script at: {}",
+        script.display()
+    );
 
     match std::env::current_dir() {
         Ok(cwd) => println!("🔍 [get_all_users] cwd: {}", cwd.display()),
@@ -459,5 +494,77 @@ fn get_all_users() -> Result<String, String> {
     } else {
         let error_msg = String::from_utf8_lossy(&output.stderr);
         Err(format!("Failed to fetch users: {}", error_msg))
+    }
+}
+
+#[tauri::command]
+async fn backup_database(backup_path: String, user_id: i32) -> Result<String, String> {
+    // Build absolute path to the JS file like your other commands
+    let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    script.push("backupDatabase.js");
+    println!("🔍 [backup_database] launching script at: {}", script.display());
+
+    // Also show working dir
+    match std::env::current_dir() {
+        Ok(cwd) => println!("🔍 [backup_database] cwd: {}", cwd.display()),
+        Err(e) => println!("⚠️  [backup_database] failed to get cwd: {}", e),
+    }
+
+    let output = Command::new("node")
+        .arg(&script)
+        .arg(&backup_path)
+        .arg(&user_id.to_string())
+        .output()
+        .map_err(|e| format!("Failed to execute backup command: {}", e))?;
+
+    println!(
+        "🔍 [backup_database] node exit: {} (stdout: {:?}, stderr: {:?})",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Backup failed: {}", stderr))
+    }
+}
+
+#[tauri::command]
+async fn import_database(backup_path: String, user_id: i32) -> Result<String, String> {
+    // Build absolute path to the JS file like your other commands
+    let mut script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    script.push("importDatabase.js");
+    println!("🔍 [import_database] launching script at: {}", script.display());
+
+    // Also show working dir
+    match std::env::current_dir() {
+        Ok(cwd) => println!("🔍 [import_database] cwd: {}", cwd.display()),
+        Err(e) => println!("⚠️  [import_database] failed to get cwd: {}", e),
+    }
+
+    let output = Command::new("node")
+        .arg(&script)
+        .arg(&backup_path)
+        .arg(&user_id.to_string())
+        .output()
+        .map_err(|e| format!("Failed to execute import command: {}", e))?;
+
+    println!(
+        "🔍 [import_database] node exit: {} (stdout: {:?}, stderr: {:?})",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Import failed: {}", stderr))
     }
 }
